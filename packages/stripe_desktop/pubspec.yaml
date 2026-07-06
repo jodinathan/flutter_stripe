@@ -1,0 +1,27 @@
+name: stripe_desktop
+description: >-
+  macOS implementation of flutter_stripe, running Stripe.js in a WKWebView.
+version: 0.1.0
+homepage: https://github.com/jodinathan/flutter_stripe/tree/feat/desktop/packages/stripe_desktop
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: '>=3.41.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  stripe_platform_interface: ^13.0.0
+  flutter_inappwebview: ^6.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    implements: flutter_stripe
+    platforms:
+      macos:
+        dartPluginClass: StripeDesktopPlugin

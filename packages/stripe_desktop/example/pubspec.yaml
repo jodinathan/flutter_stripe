@@ -1,0 +1,24 @@
+name: example
+description: "Example / spike vehicle for the stripe_desktop plugin."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_stripe: ^13.0.0
+  flutter_inappwebview: ^6.1.5
+  stripe_desktop:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
