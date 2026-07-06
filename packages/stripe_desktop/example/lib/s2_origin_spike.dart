@@ -60,13 +60,19 @@ class _S2OriginSpikeState extends State<S2OriginSpike>
             spacing: 8,
             children: [
               FilledButton(
-                onPressed: () => _run(
-                  'init',
-                  () => _bridge.call('init', {
-                    'publishableKey': widget.publishableKey(),
+                onPressed: () => _run('init', () {
+                  final key = widget.publishableKey();
+                  if (!key.startsWith('pk_')) {
+                    throw StateError(
+                      'use the publishable key (pk_test_/pk_live_), '
+                      'never a secret key',
+                    );
+                  }
+                  return _bridge.call('init', {
+                    'publishableKey': key,
                     'locale': 'auto',
-                  }),
-                ),
+                  });
+                }),
                 child: const Text('init'),
               ),
               FilledButton(

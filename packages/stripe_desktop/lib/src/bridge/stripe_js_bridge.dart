@@ -34,6 +34,10 @@ class StripeJsBridge {
   /// are loaded.
   Future<void> get ready => _ready.future;
 
+  /// Whether the bridge is attached to a live webview controller. Calls made
+  /// while detached throw `stripe_desktop_bridge_detached` immediately.
+  bool get isAttached => !_disposed && _controller != null;
+
   /// Attaches the bridge to a freshly created webview controller and
   /// registers the JavaScript handler the page posts messages to.
   void attach(InAppWebViewController controller) {

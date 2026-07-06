@@ -51,6 +51,13 @@ class _S3S4DemoState extends State<S3S4Demo>
       _addLog('Publishable key is empty.');
       return;
     }
+    if (!key.startsWith('pk_')) {
+      _addLog(
+        'This looks like a secret key — Stripe.js only takes the '
+        'publishable key (pk_test_/pk_live_). Never put sk_ in an app.',
+      );
+      return;
+    }
     Stripe.publishableKey = key;
     setState(() => _keyApplied = true);
     _addLog('Publishable key applied.');

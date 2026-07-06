@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:stripe_platform_interface/stripe_platform_interface.dart';
 
@@ -98,10 +99,10 @@ class DesktopCardFieldState extends State<DesktopCardField>
     _webView = _createWebView();
     _eventsSubscription = bridge.events.listen(_onPageEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) => _insertOverlay());
-    // The publishable key may already be known (Stripe.publishableKey set
-    // before the field was mounted); otherwise `StripeDesktop.initialise`
-    // will call [reinit] once it is.
-    unawaited(reinit());
+    // Configuration is applied by `onWebViewCreated` once the webview exists
+    // (the overlay — and therefore the webview — is only inserted after the
+    // first frame); `StripeDesktop.initialise` re-applies it if the
+    // publishable key changes while the field is mounted.
   }
 
   @override
@@ -113,9 +114,9 @@ class DesktopCardFieldState extends State<DesktopCardField>
     }
     if (widget.style != oldWidget.style ||
         widget.enablePostalCode != oldWidget.enablePostalCode) {
-      unawaited(reinit());
+      _scheduleReinit();
     }
-    _entry?.markNeedsBuild();
+    _requestOverlayRebuild();
   }
 
   @override
@@ -139,6 +140,34 @@ class DesktopCardFieldState extends State<DesktopCardField>
         .catchError((Object _) {})
         .then((_) => _applyConfiguration());
     return _configQueue;
+  }
+
+  /// Fire-and-forget [reinit] for call sites that cannot await (lifecycle
+  /// hooks): configuration failures are logged instead of becoming unhandled
+  /// async errors — the next explicit Stripe call surfaces the real problem.
+  void _scheduleReinit() {
+    unawaited(
+      reinit().catchError((Object error) {
+        debugPrint('stripe_desktop: card configuration failed: $error');
+      }),
+    );
+  }
+
+  /// Rebuilds the overlay entry, deferring to the end of the frame when the
+  /// framework is mid-build/layout ([didUpdateWidget] runs during build, and
+  /// an [OverlayEntry] is not a descendant of this widget).
+  void _requestOverlayRebuild() {
+    final entry = _entry;
+    if (entry == null) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && identical(_entry, entry)) entry.markNeedsBuild();
+      });
+    } else {
+      entry.markNeedsBuild();
+    }
   }
 
   /// Expands the overlay to (almost) fullscreen so the 3DS challenge iframe
@@ -203,13 +232,21 @@ class DesktopCardFieldState extends State<DesktopCardField>
         disableContextMenu: false,
         isInspectable: kDebugMode,
       ),
-      onWebViewCreated: bridge.attach,
+      onWebViewCreated: (controller) {
+        bridge.attach(controller);
+        // First configuration pass: `call` awaits the page's `ready` signal,
+        // so this is safe to schedule right away.
+        _scheduleReinit();
+      },
     );
   }
 
   Future<void> _applyConfiguration() async {
     final publishableKey = StripeDesktop.instance.publishableKey;
     if (publishableKey == null || !mounted) return;
+    // Too early: the webview has not been created yet. `onWebViewCreated`
+    // schedules a fresh pass once the bridge is attached.
+    if (!bridge.isAttached) return;
     if (_cardMounted) {
       await bridge.call('unmountCard', const {});
       _cardMounted = false;
