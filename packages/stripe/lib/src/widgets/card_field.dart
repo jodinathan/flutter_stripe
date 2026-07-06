@@ -159,6 +159,16 @@ class _CardFieldState extends State<CardField> {
     }
   }
 
+  /// Whether to build the card field through the Dart-side federated
+  /// implementation (`StripePlatform.buildCard`) instead of the Android/iOS
+  /// method-channel platform view. True on web (flutter_stripe_web) and on
+  /// desktop platforms (e.g. stripe_desktop on macOS), where no
+  /// method-channel view type exists.
+  bool get _useDartCardField =>
+      kIsWeb ||
+      (defaultTargetPlatform != TargetPlatform.android &&
+          defaultTargetPlatform != TargetPlatform.iOS);
+
   @override
   Widget build(BuildContext context) {
     final inputDecoration = effectiveDecoration(widget.decoration);
@@ -179,7 +189,7 @@ class _CardFieldState extends State<CardField> {
       postalCode: widget.postalCodeHintText,
     );
 
-    final platform = kIsWeb
+    final platform = _useDartCardField
         ? Stripe.buildWebCard(
             controller: controller,
             height: platformCardHeight,
@@ -554,8 +564,7 @@ class _MethodChannelCardFieldState extends State<_MethodChannelCardField>
     try {
       final map = Map<String, dynamic>.from(arguments);
       final nested = map['card'];
-      final cardJson =
-          nested is Map ? Map<String, dynamic>.from(nested) : map;
+      final cardJson = nested is Map ? Map<String, dynamic>.from(nested) : map;
       final update = CardFieldInputDetails.fromJson(cardJson);
       updateCardDetails(update, controller);
       widget.onCardChanged?.call(update);
