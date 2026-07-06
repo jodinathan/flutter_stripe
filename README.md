@@ -125,6 +125,20 @@ dhttpd --path build/web --headers "Cross-Origin-Opener-Policy:same-origin,Cross-
 dart pub global activate dhttpd
 ```
 
+#### macOS (experimental)
+
+Now you can use Stripe in native macOS apps! It is highly experimental and, like web, only a subset of features is implemented. It runs the same foundation as the web implementation — the real Stripe.js — inside the system WKWebView, so the supported feature set matches the web column:
+
+- Cardfield (`CardField` works out of the box)
+- Create paymentmethod
+- Confirm payment intent (with automatic 3D Secure handling)
+- Confirm setup intent
+- Create token
+
+PaymentSheet and wallets (Apple Pay / Google Pay) are not available on macOS.
+
+To use Stripe on macOS, it is required to add `stripe_desktop` in your pubspec file. See the [stripe_desktop README](https://github.com/flutter-stripe/flutter_stripe/tree/main/packages/stripe_desktop) for setup details (network entitlement, page hosting modes, limitations).
+
 ## Usage
 
 ### Card payments
