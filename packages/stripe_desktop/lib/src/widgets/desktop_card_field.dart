@@ -34,7 +34,9 @@ class DesktopCardField extends StatefulWidget {
     required this.controller,
     this.onCardChanged,
     this.onFocus,
+    this.onValidationError,
     this.style,
+    this.fonts = const <Map<String, String>>[],
     this.placeholder,
     this.enablePostalCode = false,
     this.width,
@@ -50,10 +52,22 @@ class DesktopCardField extends StatefulWidget {
   final CardEditController controller;
   final CardChangedCallback? onCardChanged;
 
-  /// Focus events are not forwarded by the host page in v1; accepted for
-  /// signature parity with the other platforms.
+  /// Fired on focus / blur of the Card Element. The Element is a single input
+  /// on the web, so the field name is always [CardFieldName.cardNumber] on
+  /// focus and `null` on blur.
   final CardFocusCallback? onFocus;
+
+  /// The Stripe.js validation message for what is currently typed (`null` when
+  /// valid or empty) — Stripe localises it with the `locale` given to `init`.
+  final ValueChanged<String?>? onValidationError;
+
   final CardStyle? style;
+
+  /// Stripe.js `elements({fonts})` entries, e.g.
+  /// `[{'cssSrc': 'https://…/exo2.css'}]`. Stripe loads them inside its own
+  /// iframes, which is the only way an app-bundled face can reach the card
+  /// inputs.
+  final List<Map<String, String>> fonts;
   final CardPlaceholder? placeholder;
   final bool enablePostalCode;
   final double? width;
@@ -113,7 +127,8 @@ class DesktopCardFieldState extends State<DesktopCardField>
       attachController(widget.controller);
     }
     if (widget.style != oldWidget.style ||
-        widget.enablePostalCode != oldWidget.enablePostalCode) {
+        widget.enablePostalCode != oldWidget.enablePostalCode ||
+        !_sameFonts(widget.fonts, oldWidget.fonts)) {
       _scheduleReinit();
     }
     _requestOverlayRebuild();
@@ -128,6 +143,21 @@ class DesktopCardFieldState extends State<DesktopCardField>
     _entry?.remove();
     _entry = null;
     super.dispose();
+  }
+
+  /// Compares the font lists BY VALUE. `listEquals` would compare the maps by
+  /// identity, so a caller that builds the list inside `build` would remount
+  /// the Card Element on every frame — losing focus on every keystroke.
+  static bool _sameFonts(
+    List<Map<String, String>> a,
+    List<Map<String, String>> b,
+  ) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!mapEquals(a[i], b[i])) return false;
+    }
+    return true;
   }
 
   /// (Re)applies the Stripe.js configuration: re-creates the `Stripe`
@@ -257,21 +287,32 @@ class DesktopCardFieldState extends State<DesktopCardField>
       'locale': WidgetsBinding.instance.platformDispatcher.locale
           .toLanguageTag(),
     });
+    final background = widget.style?.backgroundColor;
     await bridge.call('mountCard', {
       'style': cardElementStyleFrom(widget.style),
       'postalCodeEnabled': widget.enablePostalCode,
+      'fonts': widget.fonts,
+      if (background != null) 'background': cssRgbColor(background),
     });
     _cardMounted = true;
   }
 
   void _onPageEvent(PageEvent event) {
-    if (event.type != PageEvent.kindCardChange || !mounted) return;
-    final details = CardFieldInputDetails(
-      complete: event.complete ?? false,
-      brand: event.brand,
-    );
-    widget.onCardChanged?.call(details);
-    updateCardDetails(details, widget.controller);
+    if (!mounted) return;
+    switch (event.type) {
+      case PageEvent.kindCardFocus:
+        widget.onFocus?.call(CardFieldName.cardNumber);
+      case PageEvent.kindCardBlur:
+        widget.onFocus?.call(null);
+      case PageEvent.kindCardChange:
+        final details = CardFieldInputDetails(
+          complete: event.complete ?? false,
+          brand: event.brand,
+        );
+        widget.onValidationError?.call(event.error);
+        widget.onCardChanged?.call(details);
+        updateCardDetails(details, widget.controller);
+    }
   }
 
   void _cancelChallenge() {

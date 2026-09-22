@@ -9,13 +9,26 @@
 /// https://js.stripe.com; the page never receives secrets — only the
 /// publishable key, client secrets and billing details, always via RPC after
 /// load (never in the query string).
+///
+/// `mountCard` accepts an optional `fonts` list (Stripe.js `elements({fonts})`
+/// entries, e.g. `{cssSrc: 'https://…/exo2.css'}`): the stylesheet is fetched
+/// by Stripe INSIDE its own iframes, so a custom face reaches the card inputs
+/// without this page ever loading it. It also accepts a `background` CSS
+/// color, painted on the page itself: a macOS WKWebView stays OPAQUE WHITE no
+/// matter what the host puts behind it, so the field colour has to be applied
+/// in here.
 const String stripeDesktopPageHtml =
     r'''<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://js.stripe.com/v3"></script>
 <style>
   html,body{margin:0;background:transparent}
-  #card{position:absolute;inset:0 0 auto 0;padding:var(--pad,0)}
+  /* The Element is vertically centred in the slot: the host paints the field
+     chrome (fill, border, padding) around the webview, so the page must not
+     assume the slot is exactly as tall as the Element. */
+  #card{position:absolute;inset:0;display:flex;flex-direction:column;
+        justify-content:center;padding:var(--pad,0)}
+  #card>*{width:100%}
   /* 3DS challenge: Stripe.js injects its own fullscreen iframe — nothing to style */
 </style></head><body><div id="card"></div>
 <script>
@@ -26,11 +39,14 @@ const handlers = {
   init: (p) => { stripe = Stripe(p.publishableKey,
       {stripeAccount: p.stripeAccountId || undefined, locale: p.locale || 'auto'}); },
   mountCard: (p) => {
-    elements = stripe.elements();
+    if (p.background) document.documentElement.style.background = p.background;
+    elements = stripe.elements(p.fonts && p.fonts.length ? {fonts: p.fonts} : undefined);
     card = elements.create('card', {style: p.style, hidePostalCode: !p.postalCodeEnabled});
     card.on('change', (e) => send({kind: 'event', event: 'cardChange',
         complete: e.complete, empty: e.empty, brand: e.brand,
         error: e.error ? e.error.message : null}));
+    card.on('focus', () => send({kind: 'event', event: 'cardFocus'}));
+    card.on('blur', () => send({kind: 'event', event: 'cardBlur'}));
     card.mount('#card');
   },
   createPaymentMethod: (p) => stripe.createPaymentMethod(

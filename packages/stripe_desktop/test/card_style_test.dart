@@ -55,6 +55,26 @@ void main() {
     });
   });
 
+  group('fontFamily', () {
+    test('forwards a CSS family list to the base style', () {
+      final style = CardStyle(fontFamily: "'Exo 2', sans-serif");
+      expect(
+        cardElementStyleFrom(style),
+        {
+          'base': {'fontFamily': "'Exo 2', sans-serif"},
+          'invalid': <String, dynamic>{},
+        },
+      );
+    });
+
+    test('an empty family is dropped rather than sent as ""', () {
+      expect(cardElementStyleFrom(CardStyle(fontFamily: '')), {
+        'base': <String, dynamic>{},
+        'invalid': <String, dynamic>{},
+      });
+    });
+  });
+
   group('cssRgbColor', () {
     test('formats an opaque color as rgb()', () {
       expect(cssRgbColor(const Color(0xFF336699)), 'rgb(51, 102, 153)');

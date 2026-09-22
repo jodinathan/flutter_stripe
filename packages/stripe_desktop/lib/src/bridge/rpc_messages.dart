@@ -152,8 +152,10 @@ class PageEvent {
 
   static const kindReady = 'ready';
   static const kindCardChange = 'cardChange';
+  static const kindCardFocus = 'cardFocus';
+  static const kindCardBlur = 'cardBlur';
 
-  /// Either [kindReady] or [kindCardChange].
+  /// One of [kindReady], [kindCardChange], [kindCardFocus], [kindCardBlur].
   final String type;
 
   /// Card Element `change` event payload (only for [kindCardChange]).

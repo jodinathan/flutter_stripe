@@ -204,4 +204,16 @@ void main() {
       expect(event.brand, isNull);
     });
   });
+
+  group('PageEvent focus kinds', () {
+    test('fromJson reads cardFocus and cardBlur without payload', () {
+      final focus = PageEvent.fromJson({'kind': 'event', 'event': 'cardFocus'});
+      expect(focus.type, PageEvent.kindCardFocus);
+      expect(focus.complete, isNull);
+      expect(focus.error, isNull);
+
+      final blur = PageEvent.fromJson({'kind': 'event', 'event': 'cardBlur'});
+      expect(blur.type, PageEvent.kindCardBlur);
+    });
+  });
 }

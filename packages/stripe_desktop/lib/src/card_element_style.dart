@@ -10,9 +10,14 @@ import 'package:stripe_platform_interface/stripe_platform_interface.dart';
 /// Translates [CardStyle] into the Stripe.js Card Element `style` object
 /// (https://docs.stripe.com/js/appendix/style).
 ///
-/// Only the text-level properties are forwarded to the Element: background
-/// and border are painted by the Flutter container around the webview — the
-/// Element itself does not paint a background.
+/// Only the text-level properties are forwarded to the Element: the border is
+/// painted by the Flutter container around the webview, and the background by
+/// the PAGE (`mountCard`'s `background`) — a macOS WKWebView is opaque, so
+/// anything the host paints behind it never shows.
+///
+/// [CardStyle.fontFamily] is a CSS family list; the face itself must reach the
+/// Stripe iframe through the `fonts` option of `DesktopCardField`, since the
+/// page cannot see app-bundled fonts.
 Map<String, dynamic> cardElementStyleFrom(CardStyle? style) {
   final base = <String, dynamic>{};
   final invalid = <String, dynamic>{};
@@ -21,6 +26,10 @@ Map<String, dynamic> cardElementStyleFrom(CardStyle? style) {
     if (textColor != null) base['color'] = cssRgbColor(textColor);
     final fontSize = style.fontSize;
     if (fontSize != null) base['fontSize'] = '${fontSize}px';
+    final fontFamily = style.fontFamily;
+    if (fontFamily != null && fontFamily.isNotEmpty) {
+      base['fontFamily'] = fontFamily;
+    }
     final placeholderColor = style.placeholderColor;
     if (placeholderColor != null) {
       base['::placeholder'] = {'color': cssRgbColor(placeholderColor)};
