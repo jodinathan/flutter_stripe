@@ -69,6 +69,6 @@ lcov.info
 
 # FVM Version Cache
 .fvm/
-# Saída de build do Flutter (o test_cache do stripe_desktop chegou a ~50 MB
-# rastreados, reescritos a cada `flutter test`).
+# Flutter build output (stripe_desktop's test_cache reached ~50 MB of tracked
+# files, rewritten on every `flutter test`).
 build/
