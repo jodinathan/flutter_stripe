@@ -35,6 +35,7 @@ class DesktopCardField extends StatefulWidget {
     this.onCardChanged,
     this.onFocus,
     this.onValidationError,
+    this.onReady,
     this.style,
     this.fonts = const <Map<String, String>>[],
     this.placeholder,
@@ -60,6 +61,12 @@ class DesktopCardField extends StatefulWidget {
   /// The Stripe.js validation message for what is currently typed (`null` when
   /// valid or empty) — Stripe localises it with the `locale` given to `init`.
   final ValueChanged<String?>? onValidationError;
+
+  /// Fired once the Card Element is mounted on the page: the webview booted,
+  /// Stripe.js loaded and the Element is in place. Hosts that keep a loading
+  /// state over the field wait for this instead of guessing a delay. Fired
+  /// again after every re-mount (style, fonts or publishable key change).
+  final VoidCallback? onReady;
 
   final CardStyle? style;
 
@@ -295,6 +302,7 @@ class DesktopCardFieldState extends State<DesktopCardField>
       if (background != null) 'background': cssRgbColor(background),
     });
     _cardMounted = true;
+    if (mounted) widget.onReady?.call();
   }
 
   void _onPageEvent(PageEvent event) {
